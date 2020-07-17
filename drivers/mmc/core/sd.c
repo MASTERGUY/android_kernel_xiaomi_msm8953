@@ -1328,6 +1328,7 @@ static int _mmc_sd_resume(struct mmc_host *host)
 		goto out;
 
 	if (host->ops->get_cd && !host->ops->get_cd(host)) {
+		err = -ENOMEDIUM;
 		mmc_card_clr_suspended(host->card);
 		goto out;
 	}
@@ -1403,6 +1404,13 @@ static int mmc_sd_resume(struct mmc_host *host)
 		pm_runtime_enable(&host->card->dev);
 	}
 
+
+	if (err != -ENOMEDIUM) {
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+		pm_runtime_enable(&host->card->dev);
+	}
+
 	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 	return err;
 }
@@ -1430,14 +1438,16 @@ static int mmc_sd_runtime_suspend(struct mmc_host *host)
  */
 static int mmc_sd_runtime_resume(struct mmc_host *host)
 {
-	int err;
+	int err = 0;
 
 	err = _mmc_sd_resume(host);
-	if (err && err != -ENOMEDIUM)
+	if (err) {
 		pr_err("%s: error %d doing runtime resume\n",
 			mmc_hostname(host), err);
-
-	return 0;
+		if (err == -ENOMEDIUM)
+			mmc_card_set_removed(host->card);
+	}
+	return err;
 }
 
 static int mmc_sd_reset(struct mmc_host *host)

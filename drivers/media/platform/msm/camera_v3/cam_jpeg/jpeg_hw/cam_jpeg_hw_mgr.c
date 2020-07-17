@@ -636,6 +636,13 @@ static void cam_jpeg_mgr_print_io_bufs(struct cam_packet *packet,
 		for (j = 0; j < CAM_PACKET_MAX_PLANES; j++) {
 			if (!io_cfg[i].mem_handle[j])
 				break;
+			if (!io_cfg[i].mem_handle[j]) {
+				CAM_ERR(CAM_JPEG,
+					"Mem Handle %d is NULL for %d io config",
+					j, i);
+				break;
+			}
+
 
 			if (GET_FD_FROM_HANDLE(io_cfg[i].mem_handle[j]) ==
 				GET_FD_FROM_HANDLE(pf_buf_info)) {

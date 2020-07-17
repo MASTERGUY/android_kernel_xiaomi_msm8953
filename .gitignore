@@ -52,7 +52,7 @@ Module.symvers
 /vmlinuz
 /System.map
 /Module.markers
-
+out/
 #
 # Debian directory (make deb-pkg)
 #
@@ -118,3 +118,9 @@ all.config
 
 # fetched Android config fragments
 kernel/configs/android-*.cfg
+
+#
+#Ignoring Android.bp link file
+#
+Android.bp
+models/cifar10_gradcam.h5

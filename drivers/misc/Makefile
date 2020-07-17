@@ -64,6 +64,10 @@ obj-$(CONFIG_UID_CPUTIME)	+= uid_cputime.o
 
 obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 obj-$(CONFIG_MEMORY_STATE_TIME)	+= memory_state_time.o
+obj-$(CONFIG_QCOM_XR_SMRTVWR_MISC) += qcom-xr-smrtvwr-misc.o
+obj-$(CONFIG_TUSB1064_XR_MISC) += tusb1064.o
+obj-$(CONFIG_VXR200_XR_MISC) += vxr7200.o
+
 
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
@@ -89,3 +93,5 @@ obj-$(CONFIG_APDS9930)		+= apds993x.o
 obj-$(CONFIG_UID_SYS_STATS) += uid_sys_stats.o
 obj-$(CONFIG_MEMORY_STATE_TIME) += memory_state_time.o
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+obj-$(CONFIG_OKL4_LINK_SHBUF)    += okl4-link-shbuf.o
+

@@ -2378,4 +2378,3 @@ void idle_notifier_call_chain(unsigned long val)
 }
 EXPORT_SYMBOL_GPL(idle_notifier_call_chain);
 
-

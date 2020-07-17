@@ -188,10 +188,9 @@ out:
 		name = "<encrypted>";
 	else
 		name = raw_inode->i_name;
-	f2fs_msg(inode->i_sb, KERN_NOTICE,
-			"%s: ino = %x, name = %s, dir = %lx, err = %d",
-			__func__, ino_of_node(ipage), name,
-			IS_ERR(dir) ? 0 : dir->i_ino, err);
+	f2fs_notice(F2FS_I_SB(inode), "%s: ino = %x, name = %s, dir = %lx, err = %d",
+		    __func__, ino_of_node(ipage), name,
+		    IS_ERR(dir) ? 0 : dir->i_ino, err);
 	return err;
 }
 
@@ -287,6 +286,8 @@ static int recover_inode(struct inode *inode, struct page *page)
 	f2fs_msg(inode->i_sb, KERN_NOTICE,
 		"recover_inode: ino = %x, name = %s, inline = %x",
 			ino_of_node(page), name, raw->i_inline);
+	f2fs_notice(F2FS_I_SB(inode), "recover_inode: ino = %x, name = %s, inline = %x",
+		    ino_of_node(page), name, raw->i_inline);
 	return 0;
 }
 
@@ -367,6 +368,9 @@ next:
 				"%s: detect looped node chain, "
 				"blkaddr:%u, next:%u",
 				__func__, blkaddr, next_blkaddr_of_node(page));
+			f2fs_notice(sbi, "%s: detect looped node chain, blkaddr:%u, next:%u",
+				    __func__, blkaddr,
+				    next_blkaddr_of_node(page));
 			f2fs_put_page(page, 1);
 			err = -EINVAL;
 			break;
@@ -545,11 +549,10 @@ retry_dn:
 	f2fs_bug_on(sbi, ni.ino != ino_of_node(page));
 
 	if (ofs_of_node(dn.node_page) != ofs_of_node(page)) {
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"Inconsistent ofs_of_node, ino:%lu, ofs:%u, %u",
-			inode->i_ino, ofs_of_node(dn.node_page),
-			ofs_of_node(page));
-		err = -EFAULT;
+		f2fs_warn(sbi, "Inconsistent ofs_of_node, ino:%lu, ofs:%u, %u",
+			  inode->i_ino, ofs_of_node(dn.node_page),
+			  ofs_of_node(page));
+		err = -EFSCORRUPTED;
 		goto err;
 	}
 
@@ -561,13 +564,13 @@ retry_dn:
 
 		if (__is_valid_data_blkaddr(src) &&
 			!f2fs_is_valid_blkaddr(sbi, src, META_POR)) {
-			err = -EFAULT;
+			err = -EFSCORRUPTED;
 			goto err;
 		}
 
 		if (__is_valid_data_blkaddr(dest) &&
 			!f2fs_is_valid_blkaddr(sbi, dest, META_POR)) {
-			err = -EFAULT;
+			err = -EFSCORRUPTED;
 			goto err;
 		}
 
@@ -634,11 +637,9 @@ retry_prev:
 err:
 	f2fs_put_dnode(&dn);
 out:
-	f2fs_msg(sbi->sb, KERN_NOTICE,
-		"recover_data: ino = %lx (i_size: %s) recovered = %d, err = %d",
-		inode->i_ino,
-		file_keep_isize(inode) ? "keep" : "recover",
-		recovered, err);
+	f2fs_notice(sbi, "recover_data: ino = %lx (i_size: %s) recovered = %d, err = %d",
+		    inode->i_ino, file_keep_isize(inode) ? "keep" : "recover",
+		    recovered, err);
 	return err;
 }
 
@@ -728,6 +729,7 @@ int f2fs_recover_fsync_data(struct f2fs_sb_info *sbi, bool check_only)
 	if (s_flags & MS_RDONLY) {
 		f2fs_msg(sbi->sb, KERN_INFO,
 				"recover fsync data on readonly fs");
+		f2fs_info(sbi, "recover fsync data on readonly fs");
 		sbi->sb->s_flags &= ~MS_RDONLY;
 	}
 

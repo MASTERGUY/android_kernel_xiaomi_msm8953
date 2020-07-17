@@ -1095,6 +1095,7 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 		    */
 			rem_jiffies = wait_for_completion_timeout(
 			&cci_dev->cci_master_info[master].reset_complete,
+			&cci_dev->cci_master_info[master].rd_done,
 			CCI_TIMEOUT);
 			if (!rem_jiffies) {
 				rc = -ETIMEDOUT;
@@ -1279,6 +1280,11 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 
 	rc = wait_for_completion_timeout(
 		&cci_dev->cci_master_info[master].reset_complete, CCI_TIMEOUT);
+		"waiting_for_rd_done [exp_words: %d]",
+		((read_cfg->num_byte / 4) + 1));
+
+	rc = wait_for_completion_timeout(
+		&cci_dev->cci_master_info[master].rd_done, CCI_TIMEOUT);
 	if (rc <= 0) {
 #ifdef DUMP_CCI_REGISTERS
 		cam_cci_dump_registers(cci_dev, master, queue);
@@ -1700,6 +1706,19 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 		break;
 	case MSM_CCI_RELEASE:
 		rc = cam_cci_release(sd);
+	struct cci_device *cci_dev = v4l2_get_subdevdata(sd);
+	CAM_DBG(CAM_CCI, "cmd %d", cci_ctrl->cmd);
+
+	switch (cci_ctrl->cmd) {
+	case MSM_CCI_INIT:
+		mutex_lock(&cci_dev->init_mutex);
+		rc = cam_cci_init(sd, cci_ctrl);
+		mutex_unlock(&cci_dev->init_mutex);
+		break;
+	case MSM_CCI_RELEASE:
+		mutex_lock(&cci_dev->init_mutex);
+		rc = cam_cci_release(sd);
+		mutex_unlock(&cci_dev->init_mutex);
 		break;
 	case MSM_CCI_I2C_READ:
 		rc = cam_cci_read_bytes(sd, cci_ctrl);

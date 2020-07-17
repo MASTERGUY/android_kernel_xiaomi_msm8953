@@ -3505,6 +3505,10 @@ static ssize_t ext4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
 		get_block_func = ext4_dio_get_block_unwritten_async;
 		dio_flags = DIO_LOCKING;
 	}
+#if defined(CONFIG_EXT4_FS_ENCRYPTION)
+	WARN_ON(IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)
+		&& !fscrypt_using_hardware_encryption(inode));
+#endif
 	if (IS_DAX(inode)) {
 		ret = dax_do_io(iocb, inode, iter, get_block_func,
 				ext4_end_io_dio, dio_flags);
@@ -3625,6 +3629,7 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 	int rw = iov_iter_rw(iter);
 
 #if defined(CONFIG_FS_ENCRYPTION)
+#ifdef CONFIG_EXT4_FS_ENCRYPTION
 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)
 		&& !fscrypt_using_hardware_encryption(inode))
 		return 0;

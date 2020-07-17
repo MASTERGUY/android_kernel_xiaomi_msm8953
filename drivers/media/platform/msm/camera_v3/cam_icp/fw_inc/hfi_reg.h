@@ -1,4 +1,5 @@
 /* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -44,6 +45,11 @@
 #define HFI_REG_QDSS_IOVA                       0x6C
 #define HFI_REG_QDSS_IOVA_SIZE                  0x70
 #define HFI_REG_SFR_PTR                         0x68
+#define HFI_REG_SFR_PTR                         0x68
+#define HFI_REG_QDSS_IOVA_SIZE                  0x70
+#define HFI_REG_IO_REGION_IOVA                  0x74
+#define HFI_REG_IO_REGION_SIZE                  0x78
+
 /* end of ICP CSR registers */
 
 /* flags for ICP CSR registers */

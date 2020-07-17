@@ -47,7 +47,6 @@
 #include <linux/string.h>
 #include <linux/pagemap.h>
 #include <linux/mutex.h>
-#include <linux/mm_inline.h>
 
 #include "squashfs_fs.h"
 #include "squashfs_fs_sb.h"
@@ -493,9 +492,11 @@ static int squashfs_readpages_sparse(struct page *page,
 static int __squashfs_readpages(struct file *file, struct page *page,
 	struct list_head *readahead_pages, unsigned int nr_pages,
 	struct address_space *mapping)
+static int squashfs_readpage(struct file *file, struct page *page)
 {
-	struct inode *inode = mapping->host;
+	struct inode *inode = page->mapping->host;
 	struct squashfs_sb_info *msblk = inode->i_sb->s_fs_info;
+	int index = page->index >> (msblk->block_log - PAGE_SHIFT);
 	int file_end = i_size_read(inode) >> msblk->block_log;
 	int res;
 
@@ -543,11 +544,21 @@ static int __squashfs_readpages(struct file *file, struct page *page,
 static int squashfs_readpage(struct file *file, struct page *page)
 {
 	int ret;
+	void *pageaddr;
 
 	TRACE("Entered squashfs_readpage, page index %lx, start block %llx\n",
-	      page->index, squashfs_i(page->mapping->host)->start);
+				page->index, squashfs_i(inode)->start);
 
-	get_page(page);
+	if (page->index >= ((i_size_read(inode) + PAGE_SIZE - 1) >>
+					PAGE_SHIFT))
+		goto out;
+
+	if (index < file_end || squashfs_i(inode)->fragment_block ==
+					SQUASHFS_INVALID_BLK) {
+		u64 block = 0;
+		int bsize = read_blocklist(inode, index, &block);
+		if (bsize < 0)
+			goto error_out;
 
 	ret = __squashfs_readpages(file, page, NULL, 1, page->mapping);
 	if (ret) {
@@ -560,21 +571,31 @@ static int squashfs_readpage(struct file *file, struct page *page)
 		unlock_page(page);
 		put_page(page);
 	}
+		if (bsize == 0)
+			res = squashfs_readpage_sparse(page, expected);
+		else
+			res = squashfs_readpage_block(page, block, bsize, expected);
+	} else
+		res = squashfs_readpage_fragment(page, expected);
 
-	return 0;
-}
+	if (!res)
+		return 0;
 
-static int squashfs_readpages(struct file *file, struct address_space *mapping,
-			      struct list_head *pages, unsigned int nr_pages)
-{
-	TRACE("Entered squashfs_readpages, %u pages, first page index %lx\n",
-		nr_pages, lru_to_page(pages)->index);
-	__squashfs_readpages(file, NULL, pages, nr_pages, mapping);
+error_out:
+	SetPageError(page);
+out:
+	pageaddr = kmap_atomic(page);
+	memset(pageaddr, 0, PAGE_SIZE);
+	kunmap_atomic(pageaddr);
+	flush_dcache_page(page);
+	if (!PageError(page))
+		SetPageUptodate(page);
+	unlock_page(page);
+
 	return 0;
 }
 
 
 const struct address_space_operations squashfs_aops = {
-	.readpage = squashfs_readpage,
-	.readpages = squashfs_readpages,
+	.readpage = squashfs_readpage
 };

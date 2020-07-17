@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1491,7 +1492,6 @@ static int cti_probe(struct amba_device *adev, const struct amba_id *id)
 			return ret;
 		}
 	}
-
 	mutex_lock(&cti_lock);
 	drvdata->cti.name = ((struct coresight_platform_data *)
 			     (adev->dev.platform_data))->name;

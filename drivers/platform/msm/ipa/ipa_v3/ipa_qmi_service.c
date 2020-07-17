@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,6 +25,8 @@
 #include <linux/vmalloc.h>
 
 #include "ipa_qmi_service.h"
+
+#include <soc/qcom/boot_stats.h>
 
 #define IPA_Q6_SVC_VERS 1
 #define IPA_A5_SVC_VERS 1
@@ -606,6 +609,9 @@ static int ipa3_qmi_init_modem_send_sync_msg(void)
 			&resp_desc, &resp, sizeof(resp),
 			QMI_SEND_REQ_TIMEOUT_MS);
 	pr_info("QMI_IPA_INIT_MODEM_DRIVER_REQ_V01 response received\n");
+
+	place_marker("M - QMI ready for commands");
+
 	return ipa3_check_qmi_response(rc,
 		QMI_IPA_INIT_MODEM_DRIVER_REQ_V01, resp.resp.result,
 		resp.resp.error, "ipa_init_modem_driver_resp_msg_v01");
@@ -843,6 +849,11 @@ int ipa3_qmi_ul_filter_request_send(
 			IPAWANERR("Invalid IP type %d\n",
 					req->firewall_rules_list[i].ip_type);
 		return -EINVAL;
+				QMI_IPA_IP_TYPE_V6_V01) {
+			IPAWANERR("Invalid IP type %d\n",
+					req->firewall_rules_list[i].ip_type);
+			return -EINVAL;
+		}
 	}
 
 	req_desc.max_msg_len =

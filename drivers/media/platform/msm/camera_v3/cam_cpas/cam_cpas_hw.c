@@ -569,7 +569,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 		struct cam_cpas_axi_port *temp_axi_port = NULL;
 		uint64_t required_camnoc_bw = 0;
 		int32_t clk_rate = 0;
-
+		int64_t clk_rate = 0;
 		list_for_each_entry_safe(curr_axi_port, temp_axi_port,
 			&cpas_core->axi_ports_list_head, sibling_port) {
 			consolidated_axi_vote =
@@ -597,12 +597,14 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 		clk_rate = required_camnoc_bw / soc_private->camnoc_bus_width;
 
 		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %d",
+		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %lld",
 			required_camnoc_bw, clk_rate);
 
 		rc = cam_soc_util_set_src_clk_rate(soc_info, clk_rate);
 		if (rc)
 			CAM_ERR(CAM_CPAS,
 				"Failed in setting camnoc axi clk %llu %d %d",
+				"Failed in setting camnoc axi clk %llu %lld %d",
 				required_camnoc_bw, clk_rate, rc);
 	}
 
@@ -982,7 +984,10 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 
 	if (!CAM_CPAS_CLIENT_VALID(client_indx))
 		return -EINVAL;
-
+	if (!CAM_CPAS_CLIENT_VALID(client_indx)) {
+		CAM_ERR(CAM_CPAS, "Client index invalid %d", client_indx);
+		return -EINVAL;
+	}
 	mutex_lock(&cpas_hw->hw_mutex);
 	mutex_lock(&cpas_core->client_mutex[client_indx]);
 	cpas_client = cpas_core->cpas_client[client_indx];
@@ -1101,7 +1106,10 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 
 	if (!CAM_CPAS_CLIENT_VALID(client_indx))
 		return -EINVAL;
-
+	if (!CAM_CPAS_CLIENT_VALID(client_indx)) {
+		CAM_ERR(CAM_CPAS, "Client index invalid %d", client_indx);
+		return -EINVAL;
+	}
 	mutex_lock(&cpas_hw->hw_mutex);
 	mutex_lock(&cpas_core->client_mutex[client_indx]);
 	cpas_client = cpas_core->cpas_client[client_indx];
@@ -1164,13 +1172,20 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 		&ahb_vote, NULL);
 	if (rc)
 		goto done;
+	if (rc) {
+		CAM_ERR(CAM_CPAS, "ahb vote failed for %s rc %d",
+			cpas_client->data.identifier, rc);
+		goto done;
+	}
 
 	axi_vote.uncompressed_bw = 0;
 	axi_vote.compressed_bw = 0;
 	axi_vote.compressed_bw_ab = 0;
 	rc = cam_cpas_util_apply_client_axi_vote(cpas_hw,
 		cpas_client, &axi_vote);
-
+	if (rc)
+		CAM_ERR(CAM_CPAS, "axi vote failed for %s rc %d",
+			cpas_client->data.identifier, rc);
 done:
 	mutex_unlock(&cpas_core->client_mutex[client_indx]);
 	mutex_unlock(&cpas_hw->hw_mutex);
@@ -1234,6 +1249,12 @@ static int cam_cpas_hw_register_client(struct cam_hw_info *cpas_hw,
 	rc = cam_common_util_get_string_index(soc_private->client_name,
 		soc_private->num_clients, client_name, &client_indx);
 
+	if (rc) {
+		CAM_ERR(CAM_CPAS, "No match found for client %s",
+			client_name);
+		mutex_unlock(&cpas_hw->hw_mutex);
+		return rc;
+	}
 	mutex_lock(&cpas_core->client_mutex[client_indx]);
 
 	if (rc || !CAM_CPAS_CLIENT_VALID(client_indx) ||

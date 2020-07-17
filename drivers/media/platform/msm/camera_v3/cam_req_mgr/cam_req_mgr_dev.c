@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -274,6 +275,12 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&link_info,
+		struct cam_req_mgr_ver_info ver_info;
+
+		if (k_ioctl->size != sizeof(ver_info.u.link_info_v1))
+			return -EINVAL;
+
+		if (copy_from_user(&ver_info.u.link_info_v1,
 			u64_to_user_ptr(k_ioctl->handle),
 			sizeof(struct cam_req_mgr_link_info))) {
 			return -EFAULT;
@@ -284,10 +291,39 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			if (copy_to_user(
 				u64_to_user_ptr(k_ioctl->handle),
 				&link_info,
+		ver_info.version = VERSION_1;
+		rc = cam_req_mgr_link(&ver_info);
+		if (!rc)
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
+				&ver_info.u.link_info_v1,
 				sizeof(struct cam_req_mgr_link_info)))
 				rc = -EFAULT;
 		}
 		break;
+
+	case CAM_REQ_MGR_LINK_V2: {
+			struct cam_req_mgr_ver_info ver_info;
+
+			if (k_ioctl->size != sizeof(ver_info.u.link_info_v2))
+				return -EINVAL;
+
+			if (copy_from_user(&ver_info.u.link_info_v2,
+				u64_to_user_ptr(k_ioctl->handle),
+				sizeof(struct cam_req_mgr_link_info_v2))) {
+				return -EFAULT;
+			}
+			ver_info.version = VERSION_2;
+			rc = cam_req_mgr_link_v2(&ver_info);
+			if (!rc)
+				if (copy_to_user(
+					u64_to_user_ptr(k_ioctl->handle),
+					&ver_info.u.link_info_v2,
+					sizeof(struct
+						cam_req_mgr_link_info_v2)))
+					rc = -EFAULT;
+			}
+			break;
 
 	case CAM_REQ_MGR_UNLINK: {
 		struct cam_req_mgr_unlink_info unlink_info;
@@ -450,6 +486,31 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			rc = -EINVAL;
 		}
 		break;
+
+	case CAM_REQ_MGR_REQUEST_DUMP: {
+		struct cam_dump_req_cmd cmd;
+
+		if (k_ioctl->size != sizeof(cmd))
+			return -EINVAL;
+
+		if (copy_from_user(&cmd,
+			u64_to_user_ptr(k_ioctl->handle),
+			sizeof(struct cam_dump_req_cmd))) {
+			rc = -EFAULT;
+			break;
+		}
+
+		rc = cam_req_mgr_dump_request(&cmd);
+		if (!rc)
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
+				&cmd, sizeof(struct cam_dump_req_cmd))) {
+				rc = -EFAULT;
+				break;
+			}
+		}
+		break;
+
 	default:
 		return -ENOIOCTLCMD;
 	}

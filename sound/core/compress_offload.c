@@ -855,6 +855,7 @@ static int snd_compr_partial_drain(struct snd_compr_stream *stream)
 	default:
 		break;
 	}
+	mutex_unlock(&stream->device->lock);
 
 	/* partial drain doesn't have any meaning for capture streams */
 	if (stream->direction == SND_COMPRESS_CAPTURE)
